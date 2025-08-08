@@ -40,9 +40,10 @@ export default class FileManager {
   toAbsolutePath(fileName: string = "") {
     const topAbsolutePath = this.topPath;
 
-    if (path.normalize(fileName).indexOf(topAbsolutePath) === 0) return fileName;
+    // 确保路径不重复拼接盘符部分
+    let finalPath = path.normalize(fileName);
 
-    let finalPath = "";
+    // Windows路径修复：避免出现像 D:\D: 或 D:\G: 的错误路径
     if (os.platform() === "win32") {
       const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]{1}");
       if (reg.test(this.cwd)) {
@@ -55,6 +56,9 @@ export default class FileManager {
     if (!finalPath) {
       finalPath = path.normalize(path.join(this.topPath, this.cwd, fileName));
     }
+
+    // 修复路径，避免重复的盘符部分
+    finalPath = path.normalize(finalPath);
 
     if (
       finalPath.indexOf(topAbsolutePath) !== 0 &&
@@ -157,7 +161,6 @@ export default class FileManager {
   }
 
   async newFile(fileName: string) {
-    // if (!FileManager.checkFileName(fileName)) throw new Error(ERROR_MSG_01);
     if (!this.checkPath(fileName)) throw new Error(ERROR_MSG_01);
     const target = this.toAbsolutePath(fileName);
     fs.createFile(target);
