@@ -40,32 +40,41 @@ export default class FileManager {
   toAbsolutePath(fileName: string = "") {
     const topAbsolutePath = this.topPath;
 
-    // 确保路径不重复拼接盘符部分
+    // 规范化路径，避免重复的盘符部分
     let finalPath = path.normalize(fileName);
 
-    // Windows路径修复：避免出现像 D:\D: 或 D:\G: 的错误路径
+    // Windows平台特别处理，避免出现 D:\D: 或 D:\E: 这种无效路径
     if (os.platform() === "win32") {
-      const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]{1}");
-      if (reg.test(this.cwd)) {
-        finalPath = path.normalize(path.join(this.cwd, fileName));
-      } else if (reg.test(fileName)) {
-        finalPath = path.normalize(fileName);
-      }
-    }
+      const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]{1}");  // 匹配路径中是否有盘符
 
-    if (!finalPath) {
+      // 如果当前路径包含盘符且目标路径也包含盘符（如 D:\ 或 E:\），则直接使用目标路径
+      if (reg.test(fileName)) {
+        finalPath = path.normalize(fileName);
+      } else {
+        // 否则，拼接路径时应该使用当前的盘符（比如 D:）保持盘符的一致性
+        const currentDrive = this.cwd.match(/^[A-Za-z]:/);  // 提取当前盘符
+        if (currentDrive) {
+          finalPath = path.normalize(path.join(currentDrive[0], this.cwd, fileName));
+        } else {
+          finalPath = path.normalize(path.join(this.topPath, this.cwd, fileName));
+        }
+      }
+    } else {
+      // 对于非Windows系统，正常拼接路径
       finalPath = path.normalize(path.join(this.topPath, this.cwd, fileName));
     }
 
-    // 修复路径，避免重复的盘符部分
+    // 确保路径是规范化的，不会出现重复盘符
     finalPath = path.normalize(finalPath);
 
+    // 确保路径在顶层路径范围内
     if (
       finalPath.indexOf(topAbsolutePath) !== 0 &&
       topAbsolutePath !== "/" &&
       topAbsolutePath !== "\\"
     )
       throw new Error(ERROR_MSG_01);
+
     return finalPath;
   }
 
