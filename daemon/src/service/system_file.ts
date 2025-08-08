@@ -44,11 +44,16 @@ export default class FileManager {
 
     let finalPath = "";
     if (os.platform() === "win32") {
-      const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]{1}");
-      // ***修改点
+      // 统统匹配
+      const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]?$", "i");
+
+      // ***
       if (reg.test(fileName)) {
-        finalPath = path.normalize(fileName);
-      } else if (reg.test(this.cwd)) {
+        // 补全
+        finalPath = path.normalize(fileName.endsWith(':') ? fileName + '\\' : fileName);
+      }
+      // 再文件
+      else if (reg.test(this.cwd)) {
         finalPath = path.normalize(path.join(this.cwd, fileName));
       }
     }
@@ -58,9 +63,9 @@ export default class FileManager {
     }
 
     if (
-      finalPath.indexOf(topAbsolutePath) !== 0 &&
-      topAbsolutePath !== "/" &&
-      topAbsolutePath !== "\\"
+        finalPath.indexOf(topAbsolutePath) !== 0 &&
+        topAbsolutePath !== "/" &&
+        topAbsolutePath !== "\\"
     )
       throw new Error(ERROR_MSG_01);
     return finalPath;
@@ -88,7 +93,7 @@ export default class FileManager {
     let fileNames = fs.readdirSync(this.toAbsolutePath());
     if (searchFileName)
       fileNames = fileNames.filter((name) =>
-        name.toLowerCase().includes(searchFileName.toLowerCase())
+          name.toLowerCase().includes(searchFileName.toLowerCase())
       );
 
     const total = fileNames.length;
@@ -113,7 +118,7 @@ export default class FileManager {
           dirs.push(commonInfo);
         }
       } catch (error: any) {
-        // 忽略单个文件信息获取错误，不是哥们这边谁写的啊
+        // 忽略单个文件信息获取错误，神经病
       }
     });
     files.sort((a, b) => (a.name > b.name ? 1 : -1));
@@ -158,7 +163,6 @@ export default class FileManager {
   }
 
   async newFile(fileName: string) {
-    // if (!FileManager.checkFileName(fileName)) throw new Error(ERROR_MSG_01);
     if (!this.checkPath(fileName)) throw new Error(ERROR_MSG_01);
     const target = this.toAbsolutePath(fileName);
     fs.createFile(target);
