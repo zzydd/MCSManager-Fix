@@ -42,32 +42,38 @@ export default class FileManager {
 
     if (path.normalize(fileName).indexOf(topAbsolutePath) === 0) return fileName;
 
-    let finalPath = "";
+    let finalPath: string = "";
     if (os.platform() === "win32") {
-      // 统统匹配
+      // 使用正则匹配盘符路径（如 E: 或 E:\）
       const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]?$", "i");
 
-      // ***
+      // 处理盘符切换请求（如 cd('E:')）
       if (reg.test(fileName)) {
-        // 补全
-        finalPath = path.normalize(fileName.endsWith(':') ? fileName + '\\' : fileName);
+        // 补全路径：结尾是冒号时补充反斜杠（E: -> E:\）
+        finalPath = path.normalize(fileName.endsWith(':') 
+          ? fileName + '\\' 
+          : fileName
+        );
       }
-      // 再文件
+      // 处理当前工作目录是盘符根路径的情况（如 D:\）
       else if (reg.test(this.cwd)) {
         finalPath = path.normalize(path.join(this.cwd, fileName));
       }
     }
 
+    // 非Windows系统或未匹配特殊情况的处理
     if (!finalPath) {
       finalPath = path.normalize(path.join(this.topPath, this.cwd, fileName));
     }
 
+    // 安全检测：确保路径在允许范围内
     if (
-        finalPath.indexOf(topAbsolutePath) !== 0 &&
-        topAbsolutePath !== "/" &&
-        topAbsolutePath !== "\\"
-    )
+      finalPath.indexOf(topAbsolutePath) !== 0 &&
+      topAbsolutePath !== "/" &&
+      topAbsolutePath !== "\\"
+    ) {
       throw new Error(ERROR_MSG_01);
+    }
     return finalPath;
   }
 
@@ -88,12 +94,12 @@ export default class FileManager {
     this.cwd = path.normalize(path.join(this.cwd, dirName));
   }
 
-  list(page: 0, pageSize = 40, searchFileName?: string) {
+  list(page: number = 0, pageSize = 40, searchFileName?: string) { // 修复了page的类型
     if (pageSize > 100 || pageSize <= 0 || page < 0) throw new Error("Beyond the value limit");
     let fileNames = fs.readdirSync(this.toAbsolutePath());
     if (searchFileName)
       fileNames = fileNames.filter((name) =>
-          name.toLowerCase().includes(searchFileName.toLowerCase())
+        name.toLowerCase().includes(searchFileName.toLowerCase())
       );
 
     const total = fileNames.length;
@@ -104,8 +110,8 @@ export default class FileManager {
     fileNames.forEach((name) => {
       try {
         const info = fs.statSync(this.toAbsolutePath(name));
-        const mode = parseInt(String(parseInt(info.mode?.toString(8), 10)).slice(-3));
-        const commonInfo = {
+        const mode = parseInt(String(parseInt(info.mode?.toString(8), 10)).slice(-3);
+        const commonInfo: IFile = { // 显式指定类型
           name: name,
           size: info.size,
           time: info.atime.toString(),
@@ -118,7 +124,7 @@ export default class FileManager {
           dirs.push(commonInfo);
         }
       } catch (error: any) {
-        // 忽略单个文件信息获取错误，神经病
+        // 忽略单个文件信息获取错误
       }
     });
     files.sort((a, b) => (a.name > b.name ? 1 : -1));
@@ -165,14 +171,14 @@ export default class FileManager {
   async newFile(fileName: string) {
     if (!this.checkPath(fileName)) throw new Error(ERROR_MSG_01);
     const target = this.toAbsolutePath(fileName);
-    fs.createFile(target);
+    fs.createFileSync(target); // 修复为同步方法
   }
 
   async copy(target1: string, target2: string) {
     if (!this.checkPath(target2) || !this.check(target1)) throw new Error(ERROR_MSG_01);
     const targetPath = this.toAbsolutePath(target1);
-    target2 = this.toAbsolutePath(target2);
-    return await fs.copy(targetPath, target2);
+    const destPath = this.toAbsolutePath(target2); // 修复变量名
+    return await fs.copy(targetPath, destPath);
   }
 
   mkdir(target: string) {
@@ -184,10 +190,10 @@ export default class FileManager {
   async delete(target: string): Promise<boolean> {
     if (!this.check(target)) throw new Error(ERROR_MSG_01);
     const targetPath = this.toAbsolutePath(target);
-    return new Promise((r, j) => {
+    return new Promise((resolve, reject) => { // 修复回调参数名
       fs.remove(targetPath, (err) => {
-        if (!err) r(true);
-        else j(err);
+        if (!err) resolve(true);
+        else reject(err);
       });
     });
   }
@@ -196,8 +202,8 @@ export default class FileManager {
     if (!this.check(target)) throw new Error(ERROR_MSG_01);
     if (!this.checkPath(destPath)) throw new Error(ERROR_MSG_01);
     const targetPath = this.toAbsolutePath(target);
-    destPath = this.toAbsolutePath(destPath);
-    await fs.move(targetPath, destPath);
+    const finalDestPath = this.toAbsolutePath(destPath); // 修复变量名
+    await fs.move(targetPath, finalDestPath);
   }
 
   private zipFileCheck(path: string) {
@@ -220,13 +226,13 @@ export default class FileManager {
     const MAX_ZIP_GB = globalConfiguration.config.maxZipFileSize;
     const MAX_TOTAL_FIELS_SIZE = 1024 * 1024 * 1024 * MAX_ZIP_GB;
     const sourceZipPath = this.toAbsolutePath(sourceZip);
-    const filesPath = [];
+    const filesPath: string[] = []; // 显式指定类型
     let totalSize = 0;
     for (const iterator of files) {
       if (this.check(iterator)) {
         filesPath.push(this.toAbsolutePath(iterator));
         try {
-          totalSize += fs.statSync(this.toAbsolutePath(iterator))?.size;
+          totalSize += fs.statSync(this.toAbsolutePath(iterator))?.size || 0; // 添加默认值
         } catch (error: any) {}
       }
     }
