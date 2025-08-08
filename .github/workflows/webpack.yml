@@ -28,9 +28,3 @@ jobs:
           chmod a+x ./build.sh
           ./install-dependents.sh
           ./build.sh
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: MCSManager-build
-          path: dist/*.zip
