@@ -22,7 +22,8 @@ export default class FileManager {
   public cwd: string = ".";
 
   constructor(public topPath: string = "", public fileCode?: string) {
-    if (!path.isAbsolute(topPath)) {
+    const isWinDrivePath = /^[a-zA-Z]:/.test(topPath);
+    if (!path.isAbsolute(topPath) && !isWinDrivePath) {
       this.topPath = path.normalize(path.join(process.cwd(), topPath));
     } else {
       this.topPath = path.normalize(topPath);
