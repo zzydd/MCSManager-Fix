@@ -33,47 +33,58 @@ export default class FileManager {
     }
   }
 
-  isRootTopRath() {
+  // 修正方法名拼写
+  isRootTopPath() {
     return this.topPath === "/" || this.topPath === "\\";
   }
 
-  toAbsolutePath(fileName: string = "") {
-    const topAbsolutePath = this.topPath;
+  // 兼容旧方法名，避免现有代码报错
+  isRootTopRath() {
+    return this.isRootTopPath();
+  }
 
-    if (path.normalize(fileName).indexOf(topAbsolutePath) === 0) return fileName;
+  toAbsolutePath(fileName: string = "") {
+    const topAbsolutePath = path.resolve(this.topPath);
+
+    // 如果传入的已经是绝对路径并且在 topPath 下
+    if (path.isAbsolute(fileName) && path.resolve(fileName).toLowerCase().startsWith(topAbsolutePath.toLowerCase())) {
+      return path.resolve(fileName);
+    }
 
     let finalPath = "";
     if (os.platform() === "win32") {
-      const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]{1}");
+      const reg = /^[A-Za-z]:[\\/]/;
       if (reg.test(this.cwd)) {
-        finalPath = path.normalize(path.join(this.cwd, fileName));
+        finalPath = path.join(this.cwd, fileName);
       } else if (reg.test(fileName)) {
-        finalPath = path.normalize(fileName);
+        finalPath = fileName;
       }
     }
 
     if (!finalPath) {
-      finalPath = path.normalize(path.join(this.topPath, this.cwd, fileName));
+      finalPath = path.join(this.topPath, this.cwd, fileName);
     }
 
+    finalPath = path.resolve(finalPath);
+
     if (
-      finalPath.indexOf(topAbsolutePath) !== 0 &&
-      topAbsolutePath !== "/" &&
-      topAbsolutePath !== "\\"
-    )
+      !finalPath.toLowerCase().startsWith(topAbsolutePath.toLowerCase()) &&
+      !this.isRootTopPath()
+    ) {
       throw new Error(ERROR_MSG_01);
+    }
     return finalPath;
   }
 
   checkPath(fileNameOrPath: string) {
-    if (this.isRootTopRath()) return true;
-    const destAbsolutePath = this.toAbsolutePath(fileNameOrPath);
-    const topAbsolutePath = this.topPath;
-    return destAbsolutePath.indexOf(topAbsolutePath) === 0;
+    if (this.isRootTopPath()) return true;
+    const destAbsolutePath = path.resolve(this.toAbsolutePath(fileNameOrPath));
+    const topAbsolutePath = path.resolve(this.topPath);
+    return destAbsolutePath.toLowerCase().startsWith(topAbsolutePath.toLowerCase());
   }
 
   check(destPath: string) {
-    if (this.isRootTopRath()) return true;
+    if (this.isRootTopPath()) return true;
     return this.checkPath(destPath) && fs.existsSync(this.toAbsolutePath(destPath));
   }
 
@@ -112,7 +123,7 @@ export default class FileManager {
           dirs.push(commonInfo);
         }
       } catch (error: any) {
-        // Ignore a file information retrieval error to prevent an overall error
+        // 忽略单个文件错误
       }
     });
     files.sort((a, b) => (a.name > b.name ? 1 : -1));
@@ -157,7 +168,6 @@ export default class FileManager {
   }
 
   async newFile(fileName: string) {
-    // if (!FileManager.checkFileName(fileName)) throw new Error(ERROR_MSG_01);
     if (!this.checkPath(fileName)) throw new Error(ERROR_MSG_01);
     const target = this.toAbsolutePath(fileName);
     fs.createFile(target);
@@ -195,8 +205,8 @@ export default class FileManager {
     await fs.move(targetPath, destPath);
   }
 
-  private zipFileCheck(path: string) {
-    const fileInfo = fs.statSync(path);
+  private zipFileCheck(pathStr: string) {
+    const fileInfo = fs.statSync(pathStr);
     const MAX_ZIP_GB = globalConfiguration.config.maxZipFileSize;
     if (fileInfo.size > 1024 * 1024 * 1024 * MAX_ZIP_GB)
       throw new Error($t("TXT_CODE_system_file.unzipLimit", { max: MAX_ZIP_GB }));
