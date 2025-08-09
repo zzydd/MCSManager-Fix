@@ -47,18 +47,18 @@ export default class FileManager {
       const reg = new RegExp("^[A-Za-z]{1}:[\\\\/]{1}");
       if (reg.test(this.cwd)) {
         finalPath = path.normalize(path.join(this.cwd, fileName));
-		console.log(`1.` + `finalPath:` + finalPath + `  cwd:` + this.cwd + `  fileName:` fileName);
+		console.log(`1. finalPath: ${finalPath}  cwd:${this.cwd}  fileName:${fileName}`);
       } 
 	  if (reg.test(fileName)) {
         finalPath = path.normalize(fileName);
-		console.log(`2.` + `finalPath:` + finalPath + `  cwd:` + this.cwd + `  fileName:` fileName);
+		console.log(`2. finalPath: ${finalPath}  cwd:${this.cwd}  fileName:${fileName}`);
       }
     }
 
     if (!finalPath) {
       finalPath = path.normalize(path.join(this.topPath, this.cwd, fileName));
     }
-	console.log(`3.` + `finalPath:` + finalPath + `  cwd:` + this.cwd + `  fileName:` fileName);
+	console.log(`3. finalPath: ${finalPath}  cwd:${this.cwd}  fileName:${fileName}`);
 
     if (
       finalPath.indexOf(topAbsolutePath) !== 0 &&
@@ -66,7 +66,7 @@ export default class FileManager {
       topAbsolutePath !== "\\"
     )
       throw new Error(ERROR_MSG_01);
-	console.log(`4.` + `finalPath:` + finalPath + `  cwd:` + this.cwd + `  fileName:` fileName);
+	console.log(`4. finalPath: ${finalPath}  cwd:${this.cwd}  fileName:${fileName}`);
     return finalPath;
   }
 
